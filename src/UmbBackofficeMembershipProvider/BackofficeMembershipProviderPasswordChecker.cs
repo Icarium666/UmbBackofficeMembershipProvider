@@ -1,18 +1,18 @@
-﻿using System;
-using System.Threading.Tasks;
-using Umbraco.Core.Models.Identity;
-using Umbraco.Core.Security;
-using System.Web.Security;
-using System.Web;
-using System.Configuration;
-using umbraco;
-using Microsoft.AspNet.Identity;
-using Umbraco.Core.Logging;
-using Umbraco.Core;
-using Umbraco.Web.Security.Identity;
-using Umbraco.Core.Services;
+﻿using Microsoft.AspNet.Identity;
 using Microsoft.Owin;
+using System;
+using System.Configuration;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Web;
+using System.Web.Security;
+using Umbraco.Core;
+using Umbraco.Core.Composing;
+using Umbraco.Core.Exceptions;
+using Umbraco.Core.Models.Identity;
+using Umbraco.Core.Services;
+using Umbraco.Web;
+using Umbraco.Web.Security;
 
 namespace UmbBackofficeMembershipProvider
 {
@@ -29,7 +29,8 @@ namespace UmbBackofficeMembershipProvider
             {
                 // Get role from config file if specified. Otherwise, default to editor.
                 var configCulture = ConfigurationManager.AppSettings["BackOfficeMembershipProvider:AccountCulture"];
-                configCulture = String.IsNullOrWhiteSpace(configCulture) ? GlobalSettings.DefaultUILanguage : configCulture;
+                var globalSettings = Current.Configs.Global();
+                configCulture = String.IsNullOrWhiteSpace(configCulture) ? globalSettings.DefaultUILanguage : configCulture;
 
                 return configCulture;
             }
@@ -96,7 +97,7 @@ namespace UmbBackofficeMembershipProvider
         /// </summary>
         public ServiceContext Services
         {
-            get { return ApplicationContext.Current.Services; }
+            get { return Current.Services; }
         }
 
         protected BackOfficeUserManager<BackOfficeIdentityUser> UserManager
@@ -138,9 +139,9 @@ namespace UmbBackofficeMembershipProvider
         protected async virtual Task<IdentityResult> NewCreateUser(BackOfficeIdentityUser user, string[] userGroups, string culture, string email = null, string name = null)
         {
             // Mandate that parameters must be specified.
-            Mandate.ParameterNotNull<BackOfficeIdentityUser>(user, "user");
-            Mandate.ParameterNotNullOrEmpty<string>(userGroups, "userGroups");
-            Mandate.ParameterNotNull<string>(culture, "culture");
+            if (user == null) throw new ArgumentNullOrEmptyException(nameof(user));
+            if (userGroups == null || userGroups.Length == 0) throw new ArgumentNullOrEmptyException(nameof(userGroups));
+            if (string.IsNullOrWhiteSpace(culture)) throw new ArgumentNullOrEmptyException(nameof(culture));
 
             // Assign name to user if not already specified. Use name if specified, otherwise use email address.
             user.Name = user.Name ?? name ?? user.UserName;
@@ -189,11 +190,11 @@ namespace UmbBackofficeMembershipProvider
 
                 if (createUserTask.Succeeded)
                 {
-                    LogHelper.Info(typeof(BackofficeMembershipProviderPasswordChecker), String.Format("Created user account {0}.", user.UserName));
+                    Current.Logger.Info(typeof(BackofficeMembershipProviderPasswordChecker), String.Format("Created user account {0}.", user.UserName));
                 }
                 else
                 {
-                    LogHelper.Warn(typeof(BackofficeMembershipProviderPasswordChecker), String.Format("Failed to create user account {0} with error: {1}.", createUserTask.Errors.ToString()));
+                    Current.Logger.Warn(typeof(BackofficeMembershipProviderPasswordChecker), String.Format("Failed to create user account {0} with error: {1}.", createUserTask.Errors.ToString()));
                 }
 
                 return createUserTask;

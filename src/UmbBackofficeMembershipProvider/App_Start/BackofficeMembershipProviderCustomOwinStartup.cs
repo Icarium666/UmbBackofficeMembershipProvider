@@ -2,11 +2,12 @@ using Microsoft.Owin;
 using Owin;
 using Umbraco.Core;
 using Umbraco.Core.Security;
-using Umbraco.Web.Security.Identity;
 using UmbBackofficeMembershipProvider;
 using Umbraco.Core.Models.Identity;
 using Umbraco.Web;
 using Umbraco.Core.Configuration;
+using Umbraco.Web.Security;
+using Umbraco.Core.Composing;
 
 //To use this startup class, change the appSetting value in the web.config called 
 // "owin:appStartup" to be "BackofficeMembershipProviderCustomOwinStartup"
@@ -31,17 +32,18 @@ namespace UmbBackofficeMembershipProvider
         /// <param name="app"></param>
         protected override void ConfigureUmbracoUserManager(IAppBuilder app)
         {
-            app.ConfigureUserManagerForUmbracoBackOffice<BackOfficeUserManager, BackOfficeIdentityUser>(
-                ApplicationContext,
+            app.ConfigureUserManagerForUmbracoBackOffice<BackOfficeUserManager, BackOfficeIdentityUser>(Current.RuntimeState, Current.Configs.Global(),
                 (options, context) =>
                 {
                     var membershipProvider = MembershipProviderExtensions.GetUsersMembershipProvider().AsUmbracoMembershipProvider();
                     var userManager = BackOfficeUserManager.Create(options,
-                        ApplicationContext.Services.UserService,
-                        ApplicationContext.Services.EntityService,
-                        ApplicationContext.Services.ExternalLoginService,
+                        Current.Services.UserService,
+                        Current.Services.MemberTypeService,
+                        Current.Services.EntityService,
+                        Current.Services.ExternalLoginService,
                         membershipProvider,
-                        UmbracoConfig.For.UmbracoSettings().Content);
+                        UmbracoSettings.Content,
+                        Current.Configs.Global());
 
                     // Configure custom password checker.
                     userManager.BackOfficeUserPasswordChecker = new BackofficeMembershipProviderPasswordChecker();
