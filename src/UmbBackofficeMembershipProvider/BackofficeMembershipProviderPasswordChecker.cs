@@ -194,7 +194,7 @@ namespace UmbBackofficeMembershipProvider
                 }
                 else
                 {
-                    Current.Logger.Warn(typeof(BackofficeMembershipProviderPasswordChecker), String.Format("Failed to create user account {0} with error: {1}.", createUserTask.Errors.ToString()));
+                    Current.Logger.Warn(typeof(BackofficeMembershipProviderPasswordChecker), String.Format("Failed to create user account {0} with error: {1}.", user.UserName, createUserTask.Errors.ToString()));
                 }
 
                 return createUserTask;
